@@ -23,7 +23,6 @@ class LLMClient:
         )
         return client
 
-    # error, retry 추가
     def invoke(self, system_message_content, user_prompt_content, verbose=False):
         messages = [
             ('system', system_message_content),

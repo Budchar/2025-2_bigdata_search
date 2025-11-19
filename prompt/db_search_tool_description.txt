@@ -1,0 +1,2 @@
+Use this tool to search for information about site from the knowledge base.
+**Input must include a search query.**
