@@ -1,0 +1,9 @@
+# requirements.txt
+langchain==0.3.7
+langchain-community==0.3.7
+langchain-core==0.3.19
+langchain-huggingface==0.1.2
+langchain-elasticsearch==0.3.0
+sentence-transformers==3.3.1
+elasticsearch==8.13.1
+pypdf==6.3.0
