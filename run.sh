@@ -29,7 +29,7 @@ BACKEND_PID=$!
 
 echo "🎨 Streamlit 프론트엔드 서버를 시작합니다 (http://localhost:8501)..."
 # 2. backend 폴더로 이동하여 streamlit을 백그라운드로 실행
-(cd frontend && streamlit run streamlit_app.py) &
+(cd frontend && streamlit run streamlit_app_v2.py) &
 # 백그라운드 프로세스의 PID 저장
 FRONTEND_PID=$!
 

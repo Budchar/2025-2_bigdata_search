@@ -210,8 +210,8 @@ if prompt := st.chat_input("논문에 대해 무엇이든 물어보세요."):
         try:
             # --- [Mock 제거, 실제 API 호출] ---
             payload = {
-                "query": prompt, 
-                "mode": st.session_state.search_mode
+                "message": prompt,
+                # "mode": st.session_state.search_mode
             }
             response = requests.post(
                 BACKEND_QUERY_URL,
