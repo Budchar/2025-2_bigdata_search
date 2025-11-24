@@ -1,0 +1,158 @@
+import streamlit as st
+import requests
+import time 
+import json 
+import uuid 
+
+# -----------------------------------------------------------------
+# 1. 설정
+# -----------------------------------------------------------------
+
+# FastAPI 백엔드 주소 (main.py가 실행되는 곳) - 실제 연동 주소
+BACKEND_BASE_URL = "http://127.0.0.1:8000/agent"
+BACKEND_QUERY_URL = f"{BACKEND_BASE_URL}/query" # 검색 및 RAG
+# ⚠️ 백엔드 main.py에 translate_summary 엔드포인트가 구현되지 않아 주석 처리함.
+# BACKEND_TRANSLATE_URL = f"{BACKEND_BASE_URL}/translate_summary" 
+
+# Streamlit 페이지 설정 - 페이지 제목과 아이콘 설정
+st.set_page_config(page_title="논문 검색 AI 에이전트", page_icon="📄", layout="wide")
+st.title("📄 Agentic RAG 기반 논문 검색 및 분석 도구")
+
+# -----------------------------------------------------------------
+# 2. 멀티턴(Multi-turn)을 위한 세션 상태 관리
+# -----------------------------------------------------------------
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+# ⚠️ 현재 백엔드는 "mode"를 처리하지 않으므로, 나머지 상태 변수는 사용하지 않습니다.
+
+
+# -----------------------------------------------------------------
+# 3. 사이드바 구성 (하이브리드 검색 옵션)
+# -----------------------------------------------------------------
+# ⚠️ 백엔드 main.py의 /agent/query 엔드포인트는 모드 설정을 처리하지 않으므로 모두 주석 처리합니다.
+# def clear_chat_history_on_mode_change():
+#     # ... (함수 내용 주석 처리)
+#     pass
+
+# st.sidebar.header("🔍 검색 모드 설정")
+# selected_mode = st.sidebar.radio(
+#     # ... (라디오 버튼 내용 주석 처리)
+# )
+# st.sidebar.markdown("""
+# # ... (설명 내용 주석 처리)
+# # """)
+
+
+# -----------------------------------------------------------------
+# 4. 논문 요약/번역 요청 핸들러 (API 연동)
+# -----------------------------------------------------------------
+# ⚠️ 백엔드 main.py에 translate_summary 엔드포인트가 구현되지 않아 주석 처리합니다.
+# def request_translation(paper_id, expander_title):
+#     # ... (함수 내용 주석 처리)
+#     pass
+
+
+# -----------------------------------------------------------------
+# 5. 논문 검색 결과 표시 함수 
+# -----------------------------------------------------------------
+# ⚠️ 현재 백엔드는 구조화된 논문 리스트를 반환하지 않아 주석 처리합니다.
+# def display_papers(papers, message_index): 
+#     # ... (함수 내용 주석 처리)
+#     pass
+
+
+# -----------------------------------------------------------------
+# 6. 채팅 UI 구성 (메인 화면) (API 연동)
+# -----------------------------------------------------------------
+
+# (A) 저장된 메시지(st.session_state.messages)를 순회하며 화면에 출력
+for msg_idx, message in enumerate(st.session_state.messages): 
+    with st.chat_message(message["role"]):
+        # ⚠️ 백엔드는 단순 문자열만 반환하므로, 'content'가 딕셔너리인 경우 'result' 키를 찾습니다.
+        if isinstance(message["content"], dict):
+            # 백엔드가 반환하는 'result' 키에서 최종 에이전트 답변을 가져옵니다.
+            agent_output_text = message["content"].get("result") 
+            
+            if agent_output_text:
+                st.markdown(agent_output_text) 
+            else:
+                 st.markdown("에이전트로부터 유효한 응답을 받지 못했습니다.")
+
+        else:
+            st.markdown(message["content"])
+
+# (B) 사용자 입력 받기
+if prompt := st.chat_input("논문에 대해 무엇이든 물어보세요."):
+    
+    # 1. 사용자의 메시지를 세션에 추가
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # 2. 사용자 메시지를 화면에 출력 (즉각적인 피드백)
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # 3. AI 응답 처리
+    with st.chat_message("assistant"):
+        st.toast(f"⏳ 백엔드 API로 쿼리를 처리 중입니다...") 
+        
+        response_placeholder = st.empty()
+        response_placeholder.markdown("처리 중...") # API 호출 전 로딩 메시지
+        
+        try:
+            # --- 🚀 핵심 수정 부분: Payload Key 'message' 사용 ---
+            payload = {
+                "message": prompt,
+                # "mode": st.session_state.search_mode # 백엔드 미구현으로 제거
+            }
+            
+            response = requests.post(
+                BACKEND_QUERY_URL,
+                json=payload,
+                timeout=60 # RAG는 시간이 걸릴 수 있으므로 60초 타임아웃 설정
+            )
+            response.raise_for_status() 
+            ai_response_dict = response.json()
+            # ---------------------------------
+            
+            # 4. AI의 전체 응답(딕셔너리)을 세션에 저장
+            st.session_state.messages.append({"role": "assistant", "content": ai_response_dict})
+
+            # 5. LLM 답변을 타이핑 효과로 출력
+            # --- 🚀 핵심 수정 부분: 응답 Key 'result' 사용 ---
+            # 백엔드 main.py가 반환하는 'result' 키에서 텍스트를 가져옵니다.
+            ai_answer_text = ai_response_dict.get("result", "논문 검색이 완료되었습니다.")
+            
+            full_response = ""
+            # 타이핑 효과로 출력
+            for chunk in ai_answer_text.split():
+                full_response += chunk + " "
+                time.sleep(0.01) # 짧은 딜레이만 적용
+                response_placeholder.markdown(full_response + "▌")
+            response_placeholder.markdown(full_response)
+            
+            st.toast("✅ 응답 수신 완료!")
+
+        except requests.exceptions.Timeout:
+            error_message = "❌ 검색 요청 시간이 초과되었습니다. 백엔드(LLM/RAG) 상태를 확인하세요."
+            st.error(error_message)
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
+            response_placeholder.markdown(error_message)
+        except requests.exceptions.RequestException as e:
+            error_message = f"❌ 검색 요청 중 통신 오류가 발생했습니다: {e}"
+            st.error(error_message)
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
+            response_placeholder.markdown(error_message)
+        except json.JSONDecodeError:
+            error_message = "❌ 백엔드로부터 유효한 JSON 응답을 받지 못했습니다."
+            st.error(error_message)
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
+            response_placeholder.markdown(error_message)
+        except Exception as e:
+            error_message = f"❌ 알 수 없는 오류가 발생했습니다: {e}"
+            st.error(error_message)
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
+            response_placeholder.markdown(error_message)
+    
+    # 응답 처리가 완료된 후 전체 UI를 갱신합니다.
+    st.rerun()
