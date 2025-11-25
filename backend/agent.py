@@ -54,7 +54,7 @@ class ESAgent(LLMClient, ElasticSearchClient, WebSearchClient):
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ])
 
-        # 2. [수정] create_tool_calling_agent 사용
+        # 2. create_tool_calling_agent 사용
         # OpenAI 최신 모델들은 Function Calling 대신 Tool Calling을 사용합니다.
         agent = create_tool_calling_agent(self.llm, tools, prompt)
 

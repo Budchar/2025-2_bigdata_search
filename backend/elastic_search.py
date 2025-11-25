@@ -43,34 +43,6 @@ class ElasticSearchClient:
             print(f"Warning: Failed to connect to Elasticsearch: {e}")
             self.vector_store = None
 
-    def site_search(self, query):
-        response = self.es_client.search(
-                index="site",
-                knn={
-                    "field": "information_embedding.predicted_value",
-                    "query_vector_builder": {
-                        "text_embedding": {
-                            "model_id": self.es_model_id,
-                            "model_text": f"query: {query}"
-                        }
-                    },
-                    "k": 5,
-                    "num_candidates": 20,
-                }
-        )
-
-        formatted_results = []
-        for hit in response["hits"]["hits"]:
-            result = {
-                "score": hit["_score"],
-                "관광지명": hit["_source"]["name"],
-                "주소": hit["_source"]["address"],
-                "관광지설명": hit["_source"]["information"]
-            }
-            formatted_results.append(result)
-
-        return formatted_results
-
     def paper_search(self, query: str):
         """
         로컬 ES에 저장된 논문 내용을 검색합니다.
