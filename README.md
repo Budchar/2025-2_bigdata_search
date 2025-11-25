@@ -1,9 +1,11 @@
 환경 준비
+-- 
+
 - .env 추가
 
     전달 드린 .env.txt를 .env로 이름 바꿔서 최상위 디렉토리에 저장
 
-- python requirements 설치(3.10 기준)
+- python requirements 설치(3.12 기준)
 
     pip install -r requirements
 
