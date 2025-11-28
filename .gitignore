@@ -1,0 +1,137 @@
+# ====================
+# Python
+# ====================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ====================
+# 가상환경
+# ====================
+venv/
+.venv/
+env/
+.env.local
+rag/
+ENV/
+
+# ====================
+# 보안 관련 (중요!)
+# ====================
+# 환경변수 파일 (API 키, DB 비밀번호 등)
+.env
+.env.*
+!.env.example
+
+# 인증서 및 키 파일
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+
+# 비밀 설정 파일
+secrets.json
+secrets.yaml
+secrets.yml
+config.local.json
+*.secret
+
+# AWS 자격증명
+.aws/
+credentials
+
+# ====================
+# IDE / 에디터
+# ====================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ====================
+# 테스트 / 커버리지
+# ====================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ====================
+# Jupyter Notebook
+# ====================
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ====================
+# 로그 / 임시 파일
+# ====================
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+# ====================
+# OS 관련
+# ====================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ====================
+# Elasticsearch / Docker
+# ====================
+docker-compose.override.yml
+elasticsearch-data/
+esdata/
+
+# ====================
+# 모델 / 대용량 파일
+# ====================
+*.pt
+*.pth
+*.onnx
+*.h5
+*.pkl
+*.pickle
+models/
+*.bin
+
+# ====================
+# 기타
+# ====================
+*.bak
+*.backup
+.cache/

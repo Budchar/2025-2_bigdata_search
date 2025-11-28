@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """
 [무료 버전] 논문 PDF를 청킹 및 로컬 임베딩(HuggingFace)하여 Elasticsearch에 저장하는 스크립트
+- 하이브리드 검색(벡터 + BM25)을 지원하는 스키마로 인덱싱
 """
 
 import argparse
 import sys
 from pathlib import Path
 from typing import List
+
+from elasticsearch import Elasticsearch
 
 # LangChain 관련 임포트
 from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
@@ -19,6 +22,9 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 class LocalRagIndexer:
+    # 임베딩 모델의 출력 차원 (jhgan/ko-sbert-multitask는 768차원)
+    EMBEDDING_DIM = 768
+
     def __init__(self, es_url: str, index_name: str, device: str = "cpu"):
         """
         초기화 및 설정
@@ -56,12 +62,74 @@ class LocalRagIndexer:
             print(f"❌ 모델 로드 실패: {e}")
             sys.exit(1)
 
+        # Elasticsearch 클라이언트 (인덱스 설정용)
+        self.es_client = Elasticsearch(self.es_url)
+
+        # 하이브리드 검색을 위한 인덱스 매핑 설정
+        self._setup_hybrid_index()
+
         # Elasticsearch 연결
         self.vector_store = ElasticsearchStore(
             es_url=self.es_url,
             index_name=self.index_name,
             embedding=self.embedding,
         )
+
+    def _setup_hybrid_index(self):
+        """
+        하이브리드 검색(벡터 + BM25)을 위한 인덱스 매핑 설정
+        - text 필드: BM25 키워드 검색용 (한국어/영어 분석기 적용)
+        - vector 필드: kNN 벡터 검색용
+        """
+        # 인덱스가 이미 존재하면 삭제하고 새로 생성 (개발 환경용)
+        if self.es_client.indices.exists(index=self.index_name):
+            print(f"⚠️  기존 인덱스 '{self.index_name}' 발견. 삭제 후 재생성합니다.")
+            self.es_client.indices.delete(index=self.index_name)
+
+        # 하이브리드 검색을 위한 인덱스 매핑
+        index_settings = {
+            "settings": {
+                "analysis": {
+                    "analyzer": {
+                        "korean_english": {
+                            "type": "custom",
+                            "tokenizer": "standard",
+                            "filter": ["lowercase", "stop"],
+                        }
+                    }
+                }
+            },
+            "mappings": {
+                "properties": {
+                    # 벡터 검색용 필드 (LangChain ElasticsearchStore 기본 필드명)
+                    "vector": {
+                        "type": "dense_vector",
+                        "dims": self.EMBEDDING_DIM,
+                        "index": True,
+                        "similarity": "cosine",  # 코사인 유사도 사용
+                    },
+                    # BM25 키워드 검색용 텍스트 필드
+                    "text": {
+                        "type": "text",
+                        "analyzer": "korean_english",
+                        "fields": {"keyword": {"type": "keyword", "ignore_above": 256}},
+                    },
+                    # 메타데이터 필드들
+                    "metadata": {
+                        "type": "object",
+                        "properties": {
+                            "source": {"type": "keyword"},
+                            "page": {"type": "integer"},
+                            "chunk_id": {"type": "keyword"},
+                        },
+                    },
+                }
+            },
+        }
+
+        # 인덱스 생성
+        self.es_client.indices.create(index=self.index_name, body=index_settings)
+        print(f"✅ 하이브리드 검색용 인덱스 '{self.index_name}' 생성 완료!")
 
     def load_documents(self, path: Path, recursive: bool = False) -> List[Document]:
         """PDF 파일 로드"""
