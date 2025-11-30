@@ -7,6 +7,9 @@ Since the Local DB contains only 4 specific papers (BERT, Transformer, LoRA, Gem
 - local DB does not contain relevant papers  
 - the user needs recent, trending, or SOTA research  
 - broader literature review is required
+The assistant MUST rewrite tool outputs into the user's language before responding.
+Tool output language must NOT dictate the final answer language.
+
 
 ## 2. Mandatory Usage Scenarios (Triggers)
 ====================================================
