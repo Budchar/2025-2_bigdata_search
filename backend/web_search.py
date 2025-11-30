@@ -27,3 +27,5 @@ class WebSearchClient:
             return result
         except Exception as e:
             return f"Error fetching results from Google Scholar: {e}"
+        
+
