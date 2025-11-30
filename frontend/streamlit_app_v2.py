@@ -175,7 +175,7 @@ def display_papers(papers, message_index):
 for msg_idx, message in enumerate(st.session_state.messages): 
     with st.chat_message(message["role"]):
         if isinstance(message["content"], dict):
-            rag_answer = message["content"].get("rag_answer")
+            rag_answer = message["content"].get("result")
             related_papers = message["content"].get("related_papers")
             
             if rag_answer:
@@ -240,22 +240,22 @@ if prompt := st.chat_input("논문에 대해 무엇이든 물어보세요."):
         except requests.exceptions.Timeout:
             error_message = "❌ 검색 요청 시간이 초과되었습니다. 백엔드(LLM/RAG) 상태를 확인하세요."
             st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": {"rag_answer": error_message}})
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
             response_placeholder.markdown(error_message)
         except requests.exceptions.RequestException as e:
             error_message = f"❌ 검색 요청 중 통신 오류가 발생했습니다: {e}"
             st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": {"rag_answer": error_message}})
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
             response_placeholder.markdown(error_message)
         except json.JSONDecodeError:
             error_message = "❌ 백엔드로부터 유효한 JSON 응답을 받지 못했습니다."
             st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": {"rag_answer": error_message}})
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
             response_placeholder.markdown(error_message)
         except Exception as e:
             error_message = f"❌ 알 수 없는 오류가 발생했습니다: {e}"
             st.error(error_message)
-            st.session_state.messages.append({"role": "assistant", "content": {"rag_answer": error_message}})
+            st.session_state.messages.append({"role": "assistant", "content": {"result": error_message}})
             response_placeholder.markdown(error_message)
     
     # 응답 처리가 완료된 후 전체 UI를 갱신합니다.

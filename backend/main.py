@@ -17,7 +17,7 @@ app.add_middleware(
 
 @app.post("/agent/query")
 async def read_item(body: Body):
-    result = es_agnet.agent_chain.invoke(input=body.message)
+    result = es_agnet.agent_chain.invoke({"input":body.message})
     # 결과가 문자열이 아닌 경우 문자열로 변환
     if isinstance(result, dict):
         if 'output' in result:
