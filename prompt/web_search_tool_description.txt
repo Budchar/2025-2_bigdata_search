@@ -1,0 +1,83 @@
+# [Tool Specification: web_paper_search]
+
+## 1. Overview
+This tool performs academic web search using Google Scholar.  
+This tool searches for academic papers via external engines (e.g., Google Scholar) for topics **not present** in the Local DB.
+Since the Local DB contains only 4 specific papers (BERT, Transformer, LoRA, Gemini), this tool is the **primary default tool** for the vast majority of academic queries.
+- local DB does not contain relevant papers  
+- the user needs recent, trending, or SOTA research  
+- broader literature review is required
+
+## 2. Mandatory Usage Scenarios (Triggers)
+====================================================
+WHEN USING THIS TOOL
+====================================================
+The tool returns titles, authors, abstracts, publication years,
+citation info, and links.
+
+YOU MUST:
+1. Integrate, analyze, and synthesize these results.
+2. Provide in-depth breakdowns, not short summaries.
+3. Explain how each paper relates to the user's query or research topic.
+4. Compare the discovered papers with existing SOTA methods.
+5. Highlight:
+   • motivation  
+   • contribution  
+   • architecture  
+   • dataset  
+   • experiment  
+   • limitations  
+   • relevance to user’s goal  
+
+## 3. Query Optimization Rules
+The search query must be optimized for academic search engines. Transform the user's natural language into **keyword-based queries**.
+
+1.  **Keyword Focus:** Remove stopwords and conversational fillers (e.g., "Tell me about", "Good papers on").
+2.  **English Translation:** Always convert keywords to **English** for better result quality, even if the user asks in another language.
+3.  **Time-Boxing:** Append year markers if "recent" or "latest" is implied.
+    * *User:* "최근 의료 영상 세그멘테이션 transformer 기반 연구"
+    * *Query:* `transformer medical image segmentation survey 2024`
+4.  **Specific Targets:**
+    * *User:* "삼성 AI연구소의 multimodal 연구"
+    * *Query:* `Samsung Research multimodal 2024`
+
+## 4. Execution & Output Logic
+
+### Step 1: Search & Filter
+- Execute the search using the optimized query.
+- Select the top **3~5 most relevant papers**.
+- **Contextual Selection:** Choose papers that best fit the user's current research goal (refer to `conversation_state`).
+
+### Step 2: Information Extraction
+For each selected paper, extract:
+1.  **Metadata:** Title, Year, Authors (First/Last).
+2.  **Summary:**  length depends on user intent
+3.  **Contribution:** What problem does it solve? What is the novelty? technical details encouraged
+4.  **Positioning:** How does it compare to previous works? comparison with SOTA encouraged
+
+### Step 3: Response Formatting
+Return the results in the following structured format:
+
+> **[Title of the Paper] (Year)**
+> * **Summary:** [short if user asks for summary]
+> * **Core Contribution:** [technical explanation when needed]
+> * **Methodology:** [deep architecture details if requested]
+> * **Note:** [comparisons, limitations, relevance]
+
+## 5. Relationship with Local DB (Fallback Logic)
+- **Direct Web Search:** If the topic is clearly NOT BERT/Transformer/LoRA/Gemini, call `web_paper_search` immediately. Do not check Local DB.
+- **Fallback:** If `local_paper_search` was called but returned **0 results**, automatically trigger `web_paper_search` to find relevant information externally.
+
+## 6. Absolute Constraints
+- **Factuality:** Never fabricate paper titles, authors, or years (No Hallucination).
+- **Retry Strategy:** If results are too few, generalize the keywords and retry once.
+- **Transparency:** Do not reveal the internal query formulation process to the user; just present the results.
+- **Prioritize SOTA:** Give preference to recent (last 3 years) and highly cited papers unless specified otherwise.
+
+DO NOT:
+- Do NOT simply list papers.
+- Do NOT output short bullet points unless the user explicitly asks.
+- Do NOT provide generic encyclopedia-level summaries.
+
+GOAL:
+Produce high-quality research synthesis based on search results.

@@ -1,2 +1,75 @@
-Use this tool to search for information about site from the knowledge base.
-**Input must include a search query.**
+# [Tool Specification: local_paper_search]
+
+## 1. Overview
+This tool performs a semantic search on the local Vector DB (ElasticSearch) which stores embeddings for **4 specific core papers**.
+It is **NOT** a general-purpose search tool. It must be called strictly for the four designated topics listed below.
+
+## 2. Database Scope (Local DB Content)
+The local database contains ONLY the following four foundational papers:
+1. **BERT** (Devlin et al., 2018)
+2. **Transformer** (Attention is All You Need, Vaswani et al., 2017)
+3. **LoRA** (Low-Rank Adaptation, Hu et al., 2021) 
+
+*Note: Since these papers represent the academic foundation for NLP/Multi-modal/LLM, this tool acts as a "cache" for these specific topics.*
+
+## 3. Usage Rules (Triggers)
+
+### Mandatory Usage (Positive Triggers)
+You **MUST** use `local_paper_search` for requests directly related to the following:
+
+1. **BERT**
+   - e.g., "Find the BERT paper", "Explain BERT structure", "Summary of BERT-based models".
+2. **Transformer** (or "Attention is All You Need")
+   - e.g., "Explain Transformer architecture", "How does Self-Attention work?".
+3. **LoRA**
+   - e.g., "Summarize LoRA paper", "Parameter-efficient fine-tuning".
+4. **Gemini**
+   - e.g., "Latest Gemini paper", "Gemini model architecture summary".
+
+### Prohibited Usage (Negative Triggers)
+You **MUST NOT** use this tool for the following cases. Instead, use **`web_paper_search` (Google Scholar)**:
+- **Latest Trends in Specific Fields:** e.g., "Segmentation research in the last 3 years", "SOTA detection models".
+- **All Other Models (excluding the 4 above):** e.g., "UNet surveys", "Diffusion papers", "SAM, Mamba, ViT, GPT, LLaMA, etc."
+- **Author-based Search:** e.g., "Papers by Geoffrey Hinton".
+- **Dataset-based Search:** e.g., "ImageNet related papers".
+- **General Academic Search:** e.g., "Multimodal research overview", "Graph Neural Network papers".
+
+**Rule:** The local DB is strictly for the 4 specific papers. For the other 99% of queries, default to web search.
+
+## 4. Query Formatting Rules
+When mapping queries, preserve meaningful keywords if they refer to a sub-topic of the four papers.
+Example:
+- “BERT masking mechanism” → “bert masking mechanism”
+- “LoRA rank decomposition explanation” → “lora low rank adaptation rank decomposition”
+
+When calling `local_paper_search`, the `query` parameter must be simplified to match the stored keys:
+- For BERT requests $\rightarrow$ `query: "bert"`
+- For Transformer requests $\rightarrow$ `query: "transformer attention is all you need"`
+- For LoRA requests $\rightarrow$ `query: "lora low rank adaptation"`
+- For Gemini requests $\rightarrow$ `query: "gemini model"`
+
+
+## 5. Execution & Output Logic
+
+1.  **If Results Found (Hit):**
+- Provide detailed technical explanation, architecture analysis, and contribution analysis based ONLY on the local paper.
+- Expand depth based on the user’s intent (architecture → deep dive, summary → concise).
+- When the user asks for:
+  - architecture
+  - mechanisms
+  - equations
+  - design choices
+  - training process
+  - limitations  
+  you MUST provide deeper analysis, not short summaries.
+- **Do not** use the web search tool concurrently.
+
+
+2.  **If No Results Found (Miss):**
+- Immediately fallback and call `web_paper_search` to search on Google Scholar.
+
+## 6. Strict Constraints
+- **Scope Enforcement:** Never call `local_paper_search` for topics other than the 4 listed papers.
+- **Auto-Switch:** For general topics, latest research, or surveys, immediately use `web_paper_search`.
+- **Integrity:** Do not hallucinate content or generate fake citations.
+- **Output Quality:** Provide structural analysis and summaries; do not simply copy and paste the raw text.

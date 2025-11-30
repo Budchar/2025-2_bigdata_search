@@ -21,18 +21,24 @@ class ESAgent(LLMClient, ElasticSearchClient, WebSearchClient):
         ElasticSearchClient.__init__(self)
         WebSearchClient.__init__(self)
 
+        # 1) 프롬프트 로드
+        local_desc     = get_prompt("db_search_tool_description")
+        web_desc       = get_prompt("web_search_tool_description")
+
         # 툴 정의
         local_paper_tool = StructuredTool(
             name="local_paper_search",
             func=self.paper_search,
-            description="Search for paper contents stored in the local knowledge base (Elasticsearch). Use this FIRST.",
+            # description="Search for paper contents stored in the local knowledge base (Elasticsearch). Use this FIRST.",
+            description=local_desc,
             args_schema=RagSearchInput
         )
 
         google_scholar_tool = StructuredTool(
             name="google_scholar_search",
             func=self.google_scholar_search,
-            description="Search for external academic papers using Google Scholar. Use this if local search fails or for latest research.",
+            # description="Search for external academic papers using Google Scholar. Use this if local search fails or for latest research.",
+            description=web_desc,
             args_schema=RagSearchInput
         )
 
@@ -46,9 +52,11 @@ class ESAgent(LLMClient, ElasticSearchClient, WebSearchClient):
 
         # 프롬프트 템플릿
         system_msg = get_prompt('system_message').replace("{", "{{").replace("}", "}}")
+        memory_msg     = get_prompt("multiturn_memory").replace("{", "{{").replace("}", "}}")
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_msg),
+            ("system", memory_msg),
             MessagesPlaceholder(variable_name="chat_history"),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
