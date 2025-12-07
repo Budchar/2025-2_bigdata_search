@@ -7,9 +7,10 @@ import ast
 from .api import Body
 from .agent import ESAgent
 
-
+# 🚀 [수정] 훨씬 강력한 JSON 파싱 함수
 def safe_parse_json(text):
-    """LLM이 만든 문자열에서 최대한 JSON(dict)을 뽑아오는 강화된 헬퍼."""
+    """LLM의 출력에서 JSON(dict)을 강제로 추출하는 강력한 함수"""
+    # 1. 이미 dict라면 바로 반환
     if isinstance(text, dict):
         return text
 
@@ -18,39 +19,43 @@ def safe_parse_json(text):
 
     s = text.strip()
     
-    # 1. Markdown 코드 블록 제거 (```json ... ```)
+    # 2. Markdown 코드 블록 제거 (```json ... ```)
     s = re.sub(r"```(?:json)?", "", s, flags=re.IGNORECASE).strip()
     s = s.replace("```", "").strip()
 
-    # 2. 가장 바깥쪽 중괄호 찾기
-    m = re.search(r"\{.*\}", s, re.DOTALL)
-    if m:
-        s = m.group(0)
+    # 3. 텍스트 전체에서 가장 바깥쪽 { ... } 찾기 (Greedy Search)
+    #    LLM이 사족을 붙여도 JSON 부분만 발라내기 위함
+    match = re.search(r"\{.*\}", s, re.DOTALL)
+    if match:
+        candidate = match.group(0)
+    else:
+        candidate = s
 
-    # 3. 파싱 시도 (json.loads -> ast.literal_eval -> strict=False)
+    # 4. 파싱 시도 (순서 중요: json -> ast -> loose json)
+    
+    # 시도 1: Standard JSON
     try:
-        return json.loads(s)
+        return json.loads(candidate)
     except Exception:
         pass
 
+    # 시도 2: Python Literal (홑따옴표 ' 처리 가능)
     try:
-        return ast.literal_eval(s)
+        return ast.literal_eval(candidate)
     except Exception:
         pass
 
-    # 4. [추가] LLM이 흔히 저지르는 실수 보정 (줄바꿈 문자 등)
+    # 시도 3: 제어 문자 제거 후 재시도
     try:
-        # 제어 문자 제거 후 재시도
-        clean_s = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', s)
+        clean_s = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', candidate)
         return json.loads(clean_s)
     except Exception:
         pass
 
     return None
 
-
 def _papers_to_related(papers):
-    """{"papers":[...]} 형식을 front가 쓰는 related_papers 형식으로 변환."""
+    """Google Scholar 결과를 UI 포맷으로 변환"""
     related = []
     for p in papers:
         related.append(
@@ -60,66 +65,44 @@ def _papers_to_related(papers):
                 "published_year": p.get("published_year", "Unknown"),
                 "citation_count": int(p.get("citation_count") or 0),
                 "url": p.get("url") or p.get("source", ""),
-                "snippet": p.get("snippet", ""),
+                "snippet": p.get("snippet", "요약 없음"), # snippet이 비었을 때 대비
                 "source": p.get("source", ""),
             }
         )
     return related
-
 
 def normalize_agent_result(raw):
     """
     에이전트의 원시 응답(raw)을
     항상 { "rag_answer": str, "related_papers": [ ... ] } 형태로 변환.
     """
-
-    # 0. AgentExecutor가 {"input":..., "output": ...} 형식으로 줄 때 output만 뽑기
+    
+    # Output 껍데기 벗기기
     if isinstance(raw, dict) and "output" in raw:
-        val = raw["output"]
-        # LangChain 버전에 따라 output 안에 output이 한 번 더 중첩될 수도 있어서 while로 풀어줌
-        while isinstance(val, dict) and "output" in val and len(val) == 1:
-            val = val["output"]
-        raw = val
+        raw = raw["output"]
 
-    # 1. 이미 dict 형태인 경우
-    if isinstance(raw, dict):
-        # (1) 우리가 원하는 최종 스키마면 그대로
-        if "rag_answer" in raw and "related_papers" in raw:
-            return raw
+    # 1. 파싱 시도
+    parsed = safe_parse_json(raw)
 
-        # (2) google_scholar_search 원본: {"papers":[...]}
-        if "papers" in raw:
-            related = _papers_to_related(raw.get("papers", []))
-            return {
-                "rag_answer": "웹 검색을 통해 관련 논문들을 찾았습니다.",
-                "related_papers": related,
-            }
-
-    # 2. 여기서부터는 문자열로 취급
-    raw_str = raw if isinstance(raw, str) else str(raw)
-
-    parsed = safe_parse_json(raw_str)
-
-    # 문자열 안에서 JSON을 잘 꺼냈다면 다시 처리
+    # 2. 파싱 성공 시 (Dict)
     if isinstance(parsed, dict):
-        # (1) 최종 스키마
+        # Case A: 완벽한 구조
         if "rag_answer" in parsed and "related_papers" in parsed:
             return parsed
 
-        # (2) {"papers":[...]} 형식
+        # Case B: Google Scholar 원본 포맷인 경우 변환
         if "papers" in parsed:
-            related = _papers_to_related(parsed.get("papers", []))
             return {
-                "rag_answer": "웹 검색을 통해 관련 논문들을 찾았습니다.",
-                "related_papers": related,
+                "rag_answer": "웹 검색을 통해 최신 논문들을 찾았습니다.",
+                "related_papers": _papers_to_related(parsed["papers"]),
             }
 
-    # 3. 그래도 안 되면 그냥 문자열 전체를 rag_answer로 보여주기
+    # 3. 파싱 실패 시 (String) -> 에러 방지를 위해 빈 리스트 반환
+    #    사용자 화면에 JSON 문자열이 그대로 노출되는 것을 막기 위함
     return {
-        "rag_answer": raw_str,
+        "rag_answer": str(raw), # 어쩔 수 없이 텍스트로 보여줌
         "related_papers": [],
     }
-
 
 # ==============================
 # FastAPI 앱 초기화
@@ -137,10 +120,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.post("/agent/query")
 async def read_item(body: Body):
-    """에이전트 응답을 항상 dict(JSON) 형태로 정규화해서 반환하는 엔드포인트."""
+    # LangChain invoke
     raw = es_agnet.agent_chain.invoke({"input": body.message})
+    
+    # 결과 정규화 (JSON 파싱 포함)
     normalized = normalize_agent_result(raw)
+    
     return {"result": normalized}
