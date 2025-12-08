@@ -82,5 +82,7 @@ def search_papers(query: str) -> str:
 ---
 
 ## prompt 설명
-- `system_message`: LLM에 기본 적용할 프롬프트 (역할, 어투, 번역 등)
-- `db_search_tool_description`: 언제/어떻게 DB(ES)를 이용해 검색할지 설명
+- `system_message`: 에이전트의 페르소나, 핵심 행동 강령, 출력 형식을 정의하는 최상위 프롬프트
+- `db_search_tool_description`: 로컬 Vector DB(ElasticSearch)에 저장된 핵심 논문(BERT, Transformer, LoRA, Gemini) 전용 검색 도구 정의서
+- `web_search_tool_description`: Google Scholar를 이용한 외부 학술 자료 검색 도구 정의서
+- `multiturn_memory`: 멀티턴 대화에서 문맥을 유지하기 위한 메모리 관리 프롬프트

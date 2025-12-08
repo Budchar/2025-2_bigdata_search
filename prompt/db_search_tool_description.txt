@@ -3,6 +3,9 @@
 ## 1. Overview
 This tool performs a semantic search on the local Vector DB (ElasticSearch) which stores embeddings for **4 specific core papers**.
 It is **NOT** a general-purpose search tool. It must be called strictly for the four designated topics listed below.
+The assistant MUST rewrite tool outputs into the user's language before responding.
+Tool output language must NOT dictate the final answer language.
+
 
 ## 2. Database Scope (Local DB Content)
 The local database contains ONLY the following four foundational papers:
@@ -67,6 +70,13 @@ When calling `local_paper_search`, the `query` parameter must be simplified to m
 
 2.  **If No Results Found (Miss):**
 - Immediately fallback and call `web_paper_search` to search on Google Scholar.
+- Even if keywords match, you MUST validate the retrieved content:
+  - Check 1 (Depth): Does the text contain the technical details (equations, architecture diagrams, algorithms) required for the user's "Deep Dive" request?
+  - Check 2 (Recency): Is the retrieved paper the correct version the user asked for? (e.g., User asks for 'YOLOv8', Local DB has 'YOLOv1' → FAIL)
+  - Check 3 (Specifics): Does it contain the specific attribute requested (e.g., "learning rate", "dataset size")?
+- Action:If ANY of the above checks fail. Treat as "Insufficient Information".
+  - IMMEDIATELY trigger web_paper_search to find the specific missing details.
+  - Do not say "I don't know." Search external sources instead.
 
 ## 6. Strict Constraints
 - **Scope Enforcement:** Never call `local_paper_search` for topics other than the 4 listed papers.
